@@ -1,0 +1,13 @@
+name: GUIBuilder
+version: '1.0-SNAPSHOT'
+main: net.spinx.GUIBuilder.Main
+api-version: '1.21'
+authors: [ Spinx ]
+commands:
+  guibuilder:
+    description: Baue einfache GUIs
+    usage: /guibuilder <new|open|edit|delete> ...
+    aliases: [gb, gui]
+permissions:
+  guibuilder.use:
+    default: true

@@ -1,0 +1,8 @@
+net/spinx/GUIBuilder/GuiStorage.class
+net/spinx/GUIBuilder/GuiManager.class
+net/spinx/GUIBuilder/GuiManager$NamedHolder.class
+net/spinx/GUIBuilder/GuiListener.class
+net/spinx/GUIBuilder/Main.class
+net/spinx/GUIBuilder/GuiManager$GuiData.class
+net/spinx/GUIBuilder/GuiManager$Mode.class
+net/spinx/GUIBuilder/GuiCommand.class
