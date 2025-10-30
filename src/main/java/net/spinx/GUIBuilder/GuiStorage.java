@@ -1,12 +1,22 @@
 package net.spinx.GUIBuilder;
 
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class GuiStorage {
 
@@ -71,6 +81,95 @@ public class GuiStorage {
     public boolean delete(String name) {
         File f = fileFor(name);
         return !f.exists() || f.delete();
+    }
+
+    public Optional<File> exportHumanReadable(GuiManager.GuiData data) {
+        File exportFolder = new File(plugin.getDataFolder(), "exports");
+        if (!exportFolder.exists() && !exportFolder.mkdirs()) {
+            plugin.getLogger().severe("Konnte Export-Ordner nicht erstellen: " + exportFolder.getAbsolutePath());
+            return Optional.empty();
+        }
+
+        File outFile = new File(exportFolder, sanitize(data.name()) + ".txt");
+        try (PrintWriter writer = new PrintWriter(outFile, StandardCharsets.UTF_8)) {
+            ItemStack[] contents = data.contents();
+            int nonEmpty = 0;
+            for (ItemStack stack : contents) {
+                if (stack != null && !stack.getType().isAir()) nonEmpty++;
+            }
+
+            writer.println("GUI: " + data.name());
+            writer.println("Reihen: " + data.rows());
+            writer.println("Slots insgesamt: " + contents.length);
+            writer.println("Belegte Slots: " + nonEmpty);
+            writer.println();
+
+            if (nonEmpty == 0) {
+                writer.println("Alle Slots sind leer.");
+            } else {
+                writer.println("Slot-Details:");
+                for (int i = 0; i < contents.length; i++) {
+                    ItemStack stack = contents[i];
+                    if (stack == null || stack.getType().isAir()) continue;
+                    writeItem(writer, stack, i);
+                }
+            }
+        } catch (IOException ex) {
+            plugin.getLogger().severe("Export fehlgeschlagen für GUI '" + data.name() + "': " + ex.getMessage());
+            return Optional.empty();
+        }
+
+        return Optional.of(outFile);
+    }
+
+    private void writeItem(PrintWriter writer, ItemStack stack, int slot) {
+        int row = slot / 9 + 1;
+        int column = slot % 9 + 1;
+        writer.println(String.format(Locale.ROOT, "- Slot %02d (Reihe %d, Spalte %d)", slot, row, column));
+        writer.println("    Material: " + stack.getType());
+        if (stack.getAmount() != 1) {
+            writer.println("    Anzahl: " + stack.getAmount());
+        }
+
+        ItemMeta meta = stack.getItemMeta();
+        if (meta != null) {
+            if (meta.hasDisplayName()) {
+                writer.println("    Titel: " + strip(meta.getDisplayName()));
+            }
+            if (meta.hasLore()) {
+                writer.println("    Beschreibung:");
+                for (String line : Objects.requireNonNull(meta.getLore())) {
+                    writer.println("      • " + strip(line));
+                }
+            }
+            if (meta.hasEnchants()) {
+                writer.println("    Verzauberungen:");
+                for (Map.Entry<Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
+                    writer.println(String.format(Locale.ROOT, "      • %s Stufe %d", entry.getKey().getKey(), entry.getValue()));
+                }
+            }
+            if (!meta.getItemFlags().isEmpty()) {
+                writer.println("    Versteckte Flags: " + meta.getItemFlags().stream()
+                        .map(ItemFlag::name)
+                        .sorted()
+                        .collect(Collectors.joining(", ")));
+            }
+            if (meta.hasCustomModelData()) {
+                writer.println("    CustomModelData: " + meta.getCustomModelData());
+            }
+            if (meta instanceof Damageable damageable && damageable.hasDamage()) {
+                writer.println("    Haltbarkeit: " + damageable.getDamage());
+            }
+            if (meta instanceof PotionMeta potionMeta) {
+                writer.println("    Trankdaten: " + potionMeta.getBasePotionData());
+            }
+        }
+
+        writer.println();
+    }
+
+    private String strip(String input) {
+        return ChatColor.stripColor(input == null ? "" : input);
     }
 
     private File fileFor(String name) {
