@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.File;
 import java.util.*;
 
 public class GuiManager {
@@ -79,6 +80,23 @@ public class GuiManager {
         inv.setContents(cloneItems(base));
         p.openInventory(inv);
         editingByPlayer.put(p.getUniqueId(), data.name().toLowerCase(Locale.ROOT));
+    }
+
+    public void export(Player p, String name) {
+        GuiData data = get(name);
+        if (data == null) {
+            p.sendMessage(ChatColor.RED + "Diese GUI gibt es nicht.");
+            return;
+        }
+
+        Optional<File> exported = storage.exportHumanReadable(data);
+        if (exported.isPresent()) {
+            File file = exported.get();
+            p.sendMessage(ChatColor.GREEN + "GUI '" + data.name() + "' exportiert: "
+                    + ChatColor.GRAY + "plugins/" + plugin.getDataFolder().getName() + "/exports/" + file.getName());
+        } else {
+            p.sendMessage(ChatColor.RED + "Export fehlgeschlagen. Siehe Konsole für Details.");
+        }
     }
 
     public boolean delete(String name) {

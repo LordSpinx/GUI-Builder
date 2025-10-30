@@ -55,6 +55,10 @@ public class GuiCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(ok ? ChatColor.GREEN + "GUI '" + name + "' wurde gelöscht."
                         : ChatColor.RED + "GUI '" + name + "' konnte nicht gelöscht werden.");
             }
+            case "export" -> {
+                if (args.length < 2) { sender.sendMessage(ChatColor.YELLOW + "Nutze: /" + label + " export <name>"); return true; }
+                manager.export(p, args[1]);
+            }
             default -> help(sender, label);
         }
         return true;
@@ -75,6 +79,7 @@ public class GuiCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.GRAY + "/" + label + " open <name> " + ChatColor.DARK_GRAY + "– GUI ansehen (gesperrt)");
         sender.sendMessage(ChatColor.GRAY + "/" + label + " edit <name> [1-6] " + ChatColor.DARK_GRAY + "– GUI bearbeiten; Größe optional ändern");
         sender.sendMessage(ChatColor.GRAY + "/" + label + " delete <name> " + ChatColor.DARK_GRAY + "– GUI löschen");
+        sender.sendMessage(ChatColor.GRAY + "/" + label + " export <name> " + ChatColor.DARK_GRAY + "– Beschreibung als Textdatei speichern");
         sender.sendMessage(ChatColor.DARK_GRAY + "Beim Schließen im Edit-Modus wird automatisch gespeichert.");
     }
 
@@ -84,14 +89,15 @@ public class GuiCommand implements CommandExecutor, TabCompleter {
         if (!sender.hasPermission("guibuilder.use")) return Collections.emptyList();
 
         if (args.length == 1) {
-            return Arrays.asList("new", "open", "edit", "delete").stream()
+            return Arrays.asList("new", "open", "edit", "delete", "export").stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
         }
         if (args.length == 2) {
             if (args[0].equalsIgnoreCase("open")
                     || args[0].equalsIgnoreCase("edit")
-                    || args[0].equalsIgnoreCase("delete")) {
+                    || args[0].equalsIgnoreCase("delete")
+                    || args[0].equalsIgnoreCase("export")) {
                 return manager.getAllNames().stream()
                         .filter(n -> n.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
                         .sorted().collect(Collectors.toList());
