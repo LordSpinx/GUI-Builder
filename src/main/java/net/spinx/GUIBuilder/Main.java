@@ -11,19 +11,20 @@ import java.util.Objects;
 public class Main extends JavaPlugin {
 
     private GuiManager guiManager;
+    private boolean itemsAdderAvailable;
+    private boolean guiBuilderPackPresent;
 
     @Override
     public void onEnable() {
-        if (!isItemsAdderAvailable()) {
-            getLogger().severe("ItemsAdder ist nicht installiert oder aktiviert. GUIBuilder wird deaktiviert.");
-            Bukkit.getPluginManager().disablePlugin(this);
-            return;
-        }
+        this.itemsAdderAvailable = checkItemsAdderAvailable();
+        this.guiBuilderPackPresent = itemsAdderAvailable && checkGuiBuilderPackPresent();
 
-        if (!isGuiBuilderPackPresent()) {
-            getLogger().severe("Das GUIBuilder-Pack wurde nicht in plugins/ItemsAdder/contents gefunden. GUIBuilder wird deaktiviert.");
-            Bukkit.getPluginManager().disablePlugin(this);
-            return;
+        if (!itemsAdderAvailable) {
+            getLogger().info("ItemsAdder wurde nicht gefunden. GUIBuilder läuft ohne ItemsAdder-Integration.");
+        } else if (!guiBuilderPackPresent) {
+            getLogger().warning("ItemsAdder erkannt, aber das GUIBuilder-Pack fehlt. Einige Komfortfunktionen sind deaktiviert.");
+        } else {
+            getLogger().info("ItemsAdder und GUIBuilder-Pack erkannt. Erweiterte GUI-Benennung aktiviert.");
         }
 
         // Ordner anlegen
@@ -44,6 +45,7 @@ public class Main extends JavaPlugin {
         Objects.requireNonNull(getCommand("guibuilder")).setTabCompleter(cmd);
 
         Bukkit.getPluginManager().registerEvents(new GuiListener(guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new ItemsAdderPackReminderListener(this), this);
 
         getLogger().info("[GUIBuilder] aktiviert.");
     }
@@ -54,12 +56,12 @@ public class Main extends JavaPlugin {
         getLogger().info("[GUIBuilder] deaktiviert.");
     }
 
-    private boolean isItemsAdderAvailable() {
+    private boolean checkItemsAdderAvailable() {
         Plugin plugin = Bukkit.getPluginManager().getPlugin("ItemsAdder");
         return plugin != null && plugin.isEnabled();
     }
 
-    private boolean isGuiBuilderPackPresent() {
+    private boolean checkGuiBuilderPackPresent() {
         File pluginsDir = getDataFolder().getParentFile();
         if (pluginsDir == null) return false;
 
@@ -68,5 +70,13 @@ public class Main extends JavaPlugin {
 
         File packDirUppercase = new File(pluginsDir, "ItemsAdder/contents/GUIBuilder");
         return packDirUppercase.isDirectory();
+    }
+
+    public boolean shouldUseItemsAdderLayout() {
+        return itemsAdderAvailable && guiBuilderPackPresent;
+    }
+
+    public boolean shouldRemindPackInstallation() {
+        return itemsAdderAvailable && !guiBuilderPackPresent;
     }
 }

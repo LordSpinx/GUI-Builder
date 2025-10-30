@@ -75,8 +75,14 @@ public class GuiManager {
             storage.save(get(name)); // Größe sofort persistieren
         }
 
-        Inventory inv = Bukkit.createInventory(new NamedHolder(data.name(), Mode.EDIT), rows * 9,
-                ChatColor.DARK_GREEN + "EDIT: " + data.name());
+        String title;
+        if (plugin.shouldUseItemsAdderLayout()) {
+            title = ":offset_-8::" + rows + ":";
+        } else {
+            title = ChatColor.DARK_GREEN + "EDIT: " + data.name();
+        }
+
+        Inventory inv = Bukkit.createInventory(new NamedHolder(data.name(), Mode.EDIT), rows * 9, title);
         inv.setContents(cloneItems(base));
         p.openInventory(inv);
         editingByPlayer.put(p.getUniqueId(), data.name().toLowerCase(Locale.ROOT));
