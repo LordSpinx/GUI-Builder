@@ -21,7 +21,7 @@ public class ItemsAdderPackReminderListener implements Listener {
         Player player = event.getPlayer();
         if (!player.isOp()) return;
 
-        player.sendMessage(ChatColor.GOLD + "[GUIBuilder] ItemsAdder-Pack 'GUIBuilder' fehlt."
-                + ChatColor.YELLOW + " Lade es in plugins/ItemsAdder/contents herunter, um editierte GUIs optimal anzuzeigen.");
+        player.sendMessage(ChatColor.GOLD + "[GUIBuilder] "
+                + ChatColor.YELLOW + plugin.messages().get("reminder.itemsadder_missing"));
     }
 }

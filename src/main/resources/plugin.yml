@@ -5,7 +5,7 @@ api-version: '1.21'
 authors: [ Spinx ]
 commands:
   guibuilder:
-    description: Baue einfache GUIs
+    description: Build simple GUIs
     usage: /guibuilder <new|open|edit|delete> ...
     aliases: [gb, gui]
 permissions:
