@@ -1,5 +1,6 @@
 package net.spinx.GUIBuilder;
 
+import dev.lone.itemsadder.api.CustomStack;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -9,7 +10,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,13 +17,14 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.logging.Level;
 
 public class GuiStorage {
 
-    private final JavaPlugin plugin;
+    private final Main plugin;
     private final File folder;
 
-    public GuiStorage(JavaPlugin plugin) {
+    public GuiStorage(Main plugin) {
         this.plugin = plugin;
         this.folder = new File(plugin.getDataFolder(), "guis");
         if (!folder.exists()) folder.mkdirs();
@@ -165,6 +166,13 @@ public class GuiStorage {
             }
         }
 
+        resolveItemsAdderInfo(stack).ifPresent(info -> {
+            writer.println("    ItemsAdder: " + info.namespacedId());
+            if (info.addon() != null && !info.addon().isBlank()) {
+                writer.println("    ItemsAdder-Pack: " + info.addon());
+            }
+        });
+
         writer.println();
     }
 
@@ -184,5 +192,57 @@ public class GuiStorage {
         if (key.isBlank()) key = "gui";
         if (key.length() > 64) key = key.substring(0, 64);
         return key;
+    }
+
+    private Optional<ItemsAdderInfo> resolveItemsAdderInfo(ItemStack stack) {
+        if (!plugin.isItemsAdderAvailable()) {
+            return Optional.empty();
+        }
+
+        try {
+            CustomStack customStack = CustomStack.byItemStack(stack);
+            if (customStack == null) {
+                return Optional.empty();
+            }
+
+            String namespacedId = customStack.getNamespacedID();
+            String addon = determineAddon(customStack);
+            return Optional.of(new ItemsAdderInfo(namespacedId, addon));
+        } catch (Throwable throwable) {
+            plugin.getLogger().log(Level.FINE, "Konnte ItemsAdder-Informationen nicht ermitteln", throwable);
+            return Optional.empty();
+        }
+    }
+
+    private String determineAddon(CustomStack customStack) {
+        String configPath = customStack.getConfigPath();
+        if (configPath != null) {
+            String normalized = configPath.replace('\\', '/');
+            normalized = normalized.startsWith("/") ? normalized.substring(1) : normalized;
+
+            int contentsIndex = normalized.indexOf("contents/");
+            String remainder = contentsIndex >= 0
+                    ? normalized.substring(contentsIndex + "contents/".length())
+                    : normalized;
+
+            remainder = remainder.strip();
+            if (!remainder.isEmpty()) {
+                if (remainder.startsWith("/")) {
+                    remainder = remainder.substring(1);
+                }
+                int slashIndex = remainder.indexOf('/');
+                if (slashIndex > 0) {
+                    return remainder.substring(0, slashIndex);
+                }
+                if (slashIndex < 0 && !remainder.isBlank()) {
+                    return remainder;
+                }
+            }
+        }
+
+        return customStack.getNamespace();
+    }
+
+    private record ItemsAdderInfo(String namespacedId, String addon) {
     }
 }

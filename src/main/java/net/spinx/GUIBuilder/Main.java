@@ -79,4 +79,8 @@ public class Main extends JavaPlugin {
     public boolean shouldRemindPackInstallation() {
         return itemsAdderAvailable && !guiBuilderPackPresent;
     }
+
+    public boolean isItemsAdderAvailable() {
+        return itemsAdderAvailable;
+    }
 }
