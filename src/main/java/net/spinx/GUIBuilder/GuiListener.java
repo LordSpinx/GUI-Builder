@@ -14,9 +14,11 @@ import static net.spinx.GUIBuilder.GuiManager.Mode;
 public class GuiListener implements Listener {
 
     private final GuiManager manager;
+    private final Messages messages;
 
-    public GuiListener(GuiManager manager) {
+    public GuiListener(GuiManager manager, Messages messages) {
         this.manager = manager;
+        this.messages = messages;
     }
 
     private boolean isOurHolder(Inventory inv) {
@@ -72,7 +74,7 @@ public class GuiListener implements Listener {
             ItemStack[] contents = top.getContents();
             manager.handleClose(p, holder, contents);
         } else {
-            p.sendMessage(ChatColor.GRAY + "GUI '" + holder.name() + "' geschlossen.");
+            p.sendMessage(ChatColor.GRAY + messages.format("listener.view_closed", holder.name()));
         }
     }
 }

@@ -13,18 +13,21 @@ public class Main extends JavaPlugin {
     private GuiManager guiManager;
     private boolean itemsAdderAvailable;
     private boolean guiBuilderPackPresent;
+    private Messages messages;
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        this.messages = Messages.load(getConfig().getString("language", "en"), getLogger());
         this.itemsAdderAvailable = checkItemsAdderAvailable();
         this.guiBuilderPackPresent = itemsAdderAvailable && checkGuiBuilderPackPresent();
 
         if (!itemsAdderAvailable) {
-            getLogger().info("ItemsAdder wurde nicht gefunden. GUIBuilder läuft ohne ItemsAdder-Integration.");
+            getLogger().info(messages.get("log.itemsadder.missing"));
         } else if (!guiBuilderPackPresent) {
-            getLogger().warning("ItemsAdder erkannt, aber das GUIBuilder-Pack fehlt. Einige Komfortfunktionen sind deaktiviert.");
+            getLogger().warning(messages.get("log.itemsadder.no_pack"));
         } else {
-            getLogger().info("ItemsAdder und GUIBuilder-Pack erkannt. Erweiterte GUI-Benennung aktiviert.");
+            getLogger().info(messages.get("log.itemsadder.ready"));
         }
 
         // Ordner anlegen
@@ -37,23 +40,23 @@ public class Main extends JavaPlugin {
         // Vorhandene GUIs laden
         Map<String, GuiManager.GuiData> loaded = storage.loadAll();
         loaded.values().forEach(d -> guiManager.put(d.name(), d.rows(), d.contents()));
-        getLogger().info("Geladene GUIs: " + guiManager.getAllNames());
+        getLogger().info(messages.format("log.loaded_guis", guiManager.getAllNames()));
 
         // Commands + Listener
         GuiCommand cmd = new GuiCommand(this, guiManager);
         Objects.requireNonNull(getCommand("guibuilder")).setExecutor(cmd);
         Objects.requireNonNull(getCommand("guibuilder")).setTabCompleter(cmd);
 
-        Bukkit.getPluginManager().registerEvents(new GuiListener(guiManager), this);
+        Bukkit.getPluginManager().registerEvents(new GuiListener(guiManager, messages), this);
         Bukkit.getPluginManager().registerEvents(new ItemsAdderPackReminderListener(this), this);
 
-        getLogger().info("[GUIBuilder] aktiviert.");
+        getLogger().info(messages.get("log.enabled"));
     }
 
     @Override
     public void onDisable() {
         // Nichts nötig: jede GUI speichert in ihrer eigenen Datei on-the-fly.
-        getLogger().info("[GUIBuilder] deaktiviert.");
+        getLogger().info(messages.get("log.disabled"));
     }
 
     private boolean checkItemsAdderAvailable() {
@@ -82,5 +85,9 @@ public class Main extends JavaPlugin {
 
     public boolean isItemsAdderAvailable() {
         return itemsAdderAvailable;
+    }
+
+    public Messages messages() {
+        return messages;
     }
 }

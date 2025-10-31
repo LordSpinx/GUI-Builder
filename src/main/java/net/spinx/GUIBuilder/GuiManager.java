@@ -17,10 +17,12 @@ public class GuiManager {
     private final Map<UUID, String> editingByPlayer = new HashMap<>();
     private final Main plugin;
     private final GuiStorage storage;
+    private final Messages messages;
 
     public GuiManager(Main plugin, GuiStorage storage) {
         this.plugin = plugin;
         this.storage = storage;
+        this.messages = plugin.messages();
     }
 
     public record GuiData(String name, int rows, ItemStack[] contents) {}
@@ -42,26 +44,26 @@ public class GuiManager {
     // ------ Public Aktionen ------
 
     public void createNew(Player p, String name, int rows) {
-        if (exists(name)) { p.sendMessage(ChatColor.RED + "Diese GUI existiert bereits."); return; }
+        if (exists(name)) { p.sendMessage(ChatColor.RED + messages.get("command.gui_exists")); return; }
         rows = clampRows(rows);
         put(name, rows, new ItemStack[rows * 9]);
         storage.save(get(name)); // sofort anlegen
         openEdit(p, name, Optional.empty());
-        p.sendMessage(ChatColor.GREEN + "Neue GUI '" + name + "' mit " + rows + " Reihen erstellt (Bearbeiten).");
+        p.sendMessage(ChatColor.GREEN + messages.format("manager.create_success", name, rows));
     }
 
     public void openView(Player p, String name) {
         GuiData data = get(name);
-        if (data == null) { p.sendMessage(ChatColor.RED + "Diese GUI gibt es nicht."); return; }
+        if (data == null) { p.sendMessage(ChatColor.RED + messages.get("command.gui_missing")); return; }
         Inventory inv = Bukkit.createInventory(new NamedHolder(data.name(), Mode.VIEW), data.rows() * 9,
-                ChatColor.DARK_AQUA + "GUI: " + data.name());
+                ChatColor.DARK_AQUA + messages.format("inventory.view_title", data.name()));
         inv.setContents(cloneItems(data.contents()));
         p.openInventory(inv);
     }
 
     public void openEdit(Player p, String name, Optional<Integer> maybeNewRows) {
         GuiData data = get(name);
-        if (data == null) { p.sendMessage(ChatColor.RED + "Diese GUI gibt es nicht."); return; }
+        if (data == null) { p.sendMessage(ChatColor.RED + messages.get("command.gui_missing")); return; }
 
         int rows = data.rows();
         ItemStack[] base = data.contents();
@@ -79,7 +81,7 @@ public class GuiManager {
         if (plugin.shouldUseItemsAdderLayout()) {
             title = ":offset_-8::" + rows + ":";
         } else {
-            title = ChatColor.DARK_GREEN + "EDIT: " + data.name();
+            title = ChatColor.DARK_GREEN + messages.format("inventory.edit_title", data.name());
         }
 
         Inventory inv = Bukkit.createInventory(new NamedHolder(data.name(), Mode.EDIT), rows * 9, title);
@@ -91,17 +93,17 @@ public class GuiManager {
     public void export(Player p, String name) {
         GuiData data = get(name);
         if (data == null) {
-            p.sendMessage(ChatColor.RED + "Diese GUI gibt es nicht.");
+            p.sendMessage(ChatColor.RED + messages.get("command.gui_missing"));
             return;
         }
 
         Optional<File> exported = storage.exportHumanReadable(data);
         if (exported.isPresent()) {
             File file = exported.get();
-            p.sendMessage(ChatColor.GREEN + "GUI '" + data.name() + "' exportiert: "
-                    + ChatColor.GRAY + "plugins/" + plugin.getDataFolder().getName() + "/exports/" + file.getName());
+            String path = "plugins/" + plugin.getDataFolder().getName() + "/exports/" + file.getName();
+            p.sendMessage(ChatColor.GREEN + messages.format("manager.export_success", data.name(), ChatColor.GRAY + path + ChatColor.GREEN));
         } else {
-            p.sendMessage(ChatColor.RED + "Export fehlgeschlagen. Siehe Konsole für Details.");
+            p.sendMessage(ChatColor.RED + messages.get("manager.export_fail"));
         }
     }
 
@@ -119,14 +121,14 @@ public class GuiManager {
             if (top != null && top.getHolder() instanceof NamedHolder holder) {
                 if (holder.name().equalsIgnoreCase(removed.name())) {
                     p.closeInventory();
-                    p.sendMessage(ChatColor.RED + "GUI '" + removed.name() + "' wurde gelöscht.");
+                    p.sendMessage(ChatColor.RED + messages.format("command.delete_success", removed.name()));
                 }
             }
         }
 
         // Datei löschen
         boolean deleted = storage.delete(removed.name());
-        if (!deleted) plugin.getLogger().warning("Konnte Datei für GUI '" + removed.name() + "' nicht löschen.");
+        if (!deleted) plugin.getLogger().warning(messages.format("manager.delete_log_fail", removed.name()));
         return true;
     }
 
@@ -140,7 +142,7 @@ public class GuiManager {
                 storage.save(get(old.name())); // Änderungen sichern
             }
             editingByPlayer.remove(p.getUniqueId());
-            p.sendMessage(ChatColor.YELLOW + "GUI '" + holder.name() + "' gespeichert.");
+            p.sendMessage(ChatColor.YELLOW + messages.format("manager.saved_on_close", holder.name()));
         }
     }
 

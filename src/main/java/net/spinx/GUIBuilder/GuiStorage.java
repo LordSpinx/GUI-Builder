@@ -23,11 +23,13 @@ public class GuiStorage {
 
     private final Main plugin;
     private final File folder;
+    private final Messages messages;
 
     public GuiStorage(Main plugin) {
         this.plugin = plugin;
         this.folder = new File(plugin.getDataFolder(), "guis");
         if (!folder.exists()) folder.mkdirs();
+        this.messages = plugin.messages();
     }
 
     public Map<String, GuiManager.GuiData> loadAll() {
@@ -56,7 +58,7 @@ public class GuiStorage {
                 GuiManager.GuiData data = new GuiManager.GuiData(name, rows, contents);
                 out.put(name.toLowerCase(Locale.ROOT), data);
             } catch (Exception ex) {
-                plugin.getLogger().warning("Konnte GUI-Datei nicht laden: " + f.getName() + " -> " + ex.getMessage());
+                plugin.getLogger().warning(messages.format("storage.load_failed", f.getName(), ex.getMessage()));
             }
         }
         return out;
@@ -75,7 +77,7 @@ public class GuiStorage {
         try {
             yml.save(f);
         } catch (IOException e) {
-            plugin.getLogger().severe("Speichern fehlgeschlagen für GUI '" + data.name() + "': " + e.getMessage());
+            plugin.getLogger().severe(messages.format("storage.save_failed", data.name(), e.getMessage()));
         }
     }
 
@@ -87,7 +89,7 @@ public class GuiStorage {
     public Optional<File> exportHumanReadable(GuiManager.GuiData data) {
         File exportFolder = new File(plugin.getDataFolder(), "exports");
         if (!exportFolder.exists() && !exportFolder.mkdirs()) {
-            plugin.getLogger().severe("Konnte Export-Ordner nicht erstellen: " + exportFolder.getAbsolutePath());
+            plugin.getLogger().severe(messages.format("storage.export_folder_fail", exportFolder.getAbsolutePath()));
             return Optional.empty();
         }
 
@@ -99,16 +101,16 @@ public class GuiStorage {
                 if (stack != null && !stack.getType().isAir()) nonEmpty++;
             }
 
-            writer.println("GUI: " + data.name());
-            writer.println("Reihen: " + data.rows());
-            writer.println("Slots insgesamt: " + contents.length);
-            writer.println("Belegte Slots: " + nonEmpty);
+            writer.println(messages.format("export.header.gui", data.name()));
+            writer.println(messages.format("export.header.rows", data.rows()));
+            writer.println(messages.format("export.header.slots_total", contents.length));
+            writer.println(messages.format("export.header.slots_filled", nonEmpty));
             writer.println();
 
             if (nonEmpty == 0) {
-                writer.println("Alle Slots sind leer.");
+                writer.println(messages.get("export.empty"));
             } else {
-                writer.println("Slot-Details:");
+                writer.println(messages.get("export.details_header"));
                 for (int i = 0; i < contents.length; i++) {
                     ItemStack stack = contents[i];
                     if (stack == null || stack.getType().isAir()) continue;
@@ -116,7 +118,7 @@ public class GuiStorage {
                 }
             }
         } catch (IOException ex) {
-            plugin.getLogger().severe("Export fehlgeschlagen für GUI '" + data.name() + "': " + ex.getMessage());
+            plugin.getLogger().severe(messages.format("storage.export_failed", data.name(), ex.getMessage()));
             return Optional.empty();
         }
 
@@ -126,50 +128,51 @@ public class GuiStorage {
     private void writeItem(PrintWriter writer, ItemStack stack, int slot) {
         int row = slot / 9 + 1;
         int column = slot % 9 + 1;
-        writer.println(String.format(Locale.ROOT, "- Slot %02d (Reihe %d, Spalte %d)", slot, row, column));
-        writer.println("    Material: " + stack.getType());
+        writer.println(messages.format("export.slot_line", slot, row, column));
+        writer.println(messages.format("export.material", stack.getType()));
         if (stack.getAmount() != 1) {
-            writer.println("    Anzahl: " + stack.getAmount());
+            writer.println(messages.format("export.amount", stack.getAmount()));
         }
 
         ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             if (meta.hasDisplayName()) {
-                writer.println("    Titel: " + strip(meta.getDisplayName()));
+                writer.println(messages.format("export.title", strip(meta.getDisplayName())));
             }
             if (meta.hasLore()) {
-                writer.println("    Beschreibung:");
+                writer.println(messages.get("export.lore_header"));
                 for (String line : Objects.requireNonNull(meta.getLore())) {
-                    writer.println("      • " + strip(line));
+                    writer.println(messages.format("export.lore_line", strip(line)));
                 }
             }
             if (meta.hasEnchants()) {
-                writer.println("    Verzauberungen:");
+                writer.println(messages.get("export.enchantments"));
                 for (Map.Entry<Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
-                    writer.println(String.format(Locale.ROOT, "      • %s Stufe %d", entry.getKey().getKey(), entry.getValue()));
+                    writer.println(messages.format("export.enchant_line", entry.getKey().getKey(), entry.getValue()));
                 }
             }
             if (!meta.getItemFlags().isEmpty()) {
-                writer.println("    Versteckte Flags: " + meta.getItemFlags().stream()
+                String flags = meta.getItemFlags().stream()
                         .map(ItemFlag::name)
                         .sorted()
-                        .collect(Collectors.joining(", ")));
+                        .collect(Collectors.joining(", "));
+                writer.println(messages.format("export.hidden_flags", flags));
             }
             if (meta.hasCustomModelData()) {
-                writer.println("    CustomModelData: " + meta.getCustomModelData());
+                writer.println(messages.format("export.cmd", meta.getCustomModelData()));
             }
             if (meta instanceof Damageable damageable && damageable.hasDamage()) {
-                writer.println("    Haltbarkeit: " + damageable.getDamage());
+                writer.println(messages.format("export.durability", damageable.getDamage()));
             }
             if (meta instanceof PotionMeta potionMeta) {
-                writer.println("    Trankdaten: " + potionMeta.getBasePotionData());
+                writer.println(messages.format("export.potion", potionMeta.getBasePotionData()));
             }
         }
 
         resolveItemsAdderInfo(stack).ifPresent(info -> {
-            writer.println("    ItemsAdder: " + info.namespacedId());
+            writer.println(messages.format("export.itemsadder_id", info.namespacedId()));
             if (info.addon() != null && !info.addon().isBlank()) {
-                writer.println("    ItemsAdder-Pack: " + info.addon());
+                writer.println(messages.format("export.itemsadder_pack", info.addon()));
             }
         });
 
@@ -209,7 +212,7 @@ public class GuiStorage {
             String addon = determineAddon(customStack);
             return Optional.of(new ItemsAdderInfo(namespacedId, addon));
         } catch (Throwable throwable) {
-            plugin.getLogger().log(Level.FINE, "Konnte ItemsAdder-Informationen nicht ermitteln", throwable);
+            plugin.getLogger().log(Level.FINE, messages.get("storage.itemsadder_info_fail"), throwable);
             return Optional.empty();
         }
     }
